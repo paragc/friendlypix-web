@@ -72,7 +72,7 @@ export default class Feed {
       }
       post.fillPostData(postIds[i], postData.thumb_url || postData.url,
           postData.text, postData.author, postData.timestamp, postData.thumb_storage_uri,
-          postData.full_storage_uri, postData.full_url);
+          postData.full_storage_uri, postData.full_url, postData.mediaType);
     }
   }
 
@@ -117,7 +117,7 @@ export default class Feed {
       this.posts.push(postElement);
       this.feedImageContainer.prepend(postElement.postElement);
       postElement.fillPostData(postKeys[i], post.thumb_url ||
-          post.url, post.text, post.author, post.timestamp, null, null, post.full_url);
+          post.url, post.text, post.author, post.timestamp, null, null, post.full_url, post.mediaType);
     }
   }
 
@@ -166,7 +166,7 @@ export default class Feed {
       if (postIds.length === 0) {
         this.noPostsMessage.fadeIn();
       }
-      
+
       // Listen for new posts.
       const latestPostId = postIds[postIds.length - 1];
       this.firebaseHelper.subscribeToHomeFeed((postId, postValue) => {

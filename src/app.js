@@ -29,6 +29,7 @@ import 'material-design-icons/iconfont/material-icons.css';
 import 'typeface-amaranth/index.css';
 import 'material-design-lite/material.min.css';
 import 'firebaseui/dist/firebaseui.css';
+import 'video.js/dist/video-js.min.css';
 import './app.css';
 
 /**
@@ -39,7 +40,7 @@ import './app.css';
  *  - Auth to know if the user is signed-in.
  *  - The App's router which can display the Splash page.
  *  - Enable Offline.
- * 
+ *
  * The rest of the app is loaded asynchroneously and passed to the router.
  * Google Analytics is asynchroneously loaded.
  */

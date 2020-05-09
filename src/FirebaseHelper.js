@@ -58,6 +58,22 @@ export default class FirebaseHelper {
   }
 
   /**
+   * Thumbnail extension
+   * @return {string}
+   */
+  static get THUMB_EXTENSION() {
+    return '.jpg';
+  }
+
+  /**
+   * Thumbnail metadata
+   * @return {string}
+   */
+  static get THUMB_METADATA() {
+    return {type: 'image/jpeg'};
+  }
+
+  /**
    * Initializes this Firebase facade.
    * @constructor
    */
@@ -546,31 +562,33 @@ export default class FirebaseHelper {
   }
 
   /**
-   * Uploads a new Picture to Cloud Storage and adds a new post referencing it.
+   * Creates a new post with a pic or video.
+   * Uploads a new media to Cloud Storage and adds a new post referencing it.
    * This returns a Promise which completes with the new Post ID.
    */
-  uploadNewPic(pic, thumb, fileName, text) {
+  createPost(media, thumb, fileName, text) {
     // Get a reference to where the post will be created.
     const newPostKey = this.database.ref('/posts').push().key;
+    const thumbFileName = fileName.replace(/\.[^.]+$/, FirebaseHelper.THUMB_EXTENSION);
 
-    // Start the pic file upload to Cloud Storage.
-    const picRef = this.storage.ref(`${this.auth.currentUser.uid}/full/${newPostKey}/${fileName}`);
+    // Start the media file upload to Cloud Storage.
+    const mediaRef = this.storage.ref(`${this.auth.currentUser.uid}/full/${newPostKey}/${fileName}`);
     const metadata = {
-      contentType: pic.type,
+      contentType: media.type,
     };
-    const picUploadTask = picRef.put(pic, metadata).then((snapshot) => {
-      console.log('New pic uploaded. Size:', snapshot.totalBytes, 'bytes.');
+    const mediaUploadTask = mediaRef.put(media, metadata).then((snapshot) => {
+      console.log('New media uploaded. Size:', snapshot.totalBytes, 'bytes.');
       return snapshot.ref.getDownloadURL().then((url) => {
         console.log('File available at', url);
         return url;
       });
     }).catch((error) => {
-      console.error('Error while uploading new pic', error);
+      console.error('Error while uploading new media', error);
     });
 
     // Start the thumb file upload to Cloud Storage.
-    const thumbRef = this.storage.ref(`${this.auth.currentUser.uid}/thumb/${newPostKey}/${fileName}`);
-    const tumbUploadTask = thumbRef.put(thumb, metadata).then((snapshot) => {
+    const thumbRef = this.storage.ref(`${this.auth.currentUser.uid}/thumb/${newPostKey}/${thumbFileName}`);
+    const thumbUploadTask = thumbRef.put(thumb, FirebaseHelper.THUMB_METADATA).then((snapshot) => {
       console.log('New thumb uploaded. Size:', snapshot.totalBytes, 'bytes.');
       return snapshot.ref.getDownloadURL().then((url) => {
         console.log('File available at', url);
@@ -580,8 +598,8 @@ export default class FirebaseHelper {
       console.error('Error while uploading new thumb', error);
     });
 
-    return Promise.all([picUploadTask, tumbUploadTask]).then((urls) => {
-      // Once both pics and thumbnails has been uploaded add a new post in the Firebase Database and
+    return Promise.all([mediaUploadTask, thumbUploadTask]).then((urls) => {
+      // Once both media and thumbnails has been uploaded add a new post in the Firebase Database and
       // to its fanned out posts lists (user's posts and home post).
       const update = {};
       update[`/posts/${newPostKey}`] = {
@@ -589,8 +607,9 @@ export default class FirebaseHelper {
         thumb_url: urls[1],
         text: text,
         client: 'web',
+        mediaType: media.type,
         timestamp: firebase.database.ServerValue.TIMESTAMP,
-        full_storage_uri: picRef.toString(),
+        full_storage_uri: mediaRef.toString(),
         thumb_storage_uri: thumbRef.toString(),
         author: {
           uid: this.auth.currentUser.uid,

@@ -50,7 +50,8 @@
     "page": "^1.8.6",
     "sweetalert": "^2.1.0",
     "typeface-amaranth": "0.0.54",
-    "universal-ga": "^1.2.0"
+    "universal-ga": "^1.2.0",
+    "video.js": "^7.7.6"
   },
   "private": true
 }

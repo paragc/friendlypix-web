@@ -4,6 +4,12 @@ function isImageBelowMaxSize(maxSizeMB) {
       && request.resource.contentType.matches('image/.*');
 }
 
+// Returns true if the uploaded file is an image and its size is below the given number of MB.
+function isVideoBelowMaxSize(maxSizeMB) {
+  return request.resource.size < maxSizeMB * 1024 * 1024
+      && request.resource.contentType.matches('video/.*');
+}
+
 // Returns true if the user that initiated the request is an admin.
 function isAdmin() {
   return request.auth.token != null && request.auth.token.admin == true;
@@ -27,7 +33,7 @@ service firebase.storage {
     }
     match /{userId}/full/{postId}/{fileName} {
       allow read;
-      allow write: if isAdmin() || isOwner(userId) && (isResourceBeingDeleted() || isImageBelowMaxSize(5));
+      allow write: if isAdmin() || isOwner(userId) && (isResourceBeingDeleted() || isImageBelowMaxSize(5) || isVideoBelowMaxSize(30));
     }
   }
 }

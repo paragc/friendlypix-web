@@ -16,6 +16,7 @@
 'use strict';
 
 import $ from 'jquery';
+import videojs from 'video.js';
 import firebase from 'firebase/app';
 import 'firebase/auth';
 import page from 'page';
@@ -60,20 +61,55 @@ export default class Uploader {
     // DOM Elements
     this.addButton = $('#add');
     this.addButtonFloating = $('#add-floating');
-    this.imageInput = $('#fp-mediacapture');
+    this.mediaInput = $('#fp-mediacapture');
     this.overlay = $('.fp-overlay', '#page-add');
     this.newPictureContainer = $('#newPictureContainer');
+    this.newVideoContainer = $('#newVideoContainer');
     this.uploadButton = $('.fp-upload');
-    this.imageCaptionInput = $('#imageCaptionInput');
-    this.uploadPicForm = $('#uploadPicForm');
+    this.mediaCaptionInput = $('#mediaCaptionInput');
+    this.uploadMediaForm = $('#uploadMediaForm');
     this.toast = $('.mdl-js-snackbar');
 
     // Event bindings
     this.addButton.click(() => this.initiatePictureCapture());
     this.addButtonFloating.click(() => this.initiatePictureCapture());
-    this.imageInput.change((e) => this.readPicture(e));
-    this.uploadPicForm.submit((e) => this.uploadPic(e));
-    this.imageCaptionInput.keyup(() => this.uploadButton.prop('disabled', !this.imageCaptionInput.val()));
+    this.mediaInput.change((e) => this.readMedia(e));
+    this.uploadMediaForm.submit((e) => this.uploadMedia(e));
+    this.mediaCaptionInput.keyup(() => this.uploadButton.prop('disabled', !this.mediaCaptionInput.val()));
+
+    this.newVideoPlayer = videojs(this.newVideoContainer.get(0), {
+      width: '600px',
+      height: 'auto',
+      controls: true,
+    }, () => {
+      this.newVideoContainer = $('#newVideoContainer');
+    });
+  }
+
+  static createVideo(src, options = {}) {
+    const {append = false, initialTime = 0} = options;
+    const video = document.createElement('video');
+    if (src != '') {
+      video.src = src;
+    }
+    if (append == true) {
+      document.body.appendChild(video);
+    }
+    return new Promise((resolve, reject) => {
+      video.addEventListener('loadeddata', () => {
+        if (initialTime === 0) {
+          resolve(video);
+        } else {
+          video.currentTime = video.duration * initialTime;
+        }
+      }, false);
+      video.addEventListener('seeked', function() {
+        if (initialTime > 0) {
+          resolve(video);
+        }
+      }, false);
+      video.addEventListener('error', (err) => reject(err), false);
+    });
   }
 
   // Adds polyfills required for the Uploader.
@@ -100,16 +136,26 @@ export default class Uploader {
    * Start taking a picture.
    */
   initiatePictureCapture() {
-    this.imageInput.trigger('click');
+    this.mediaInput.trigger('click');
   }
 
   /**
-   * Displays the given pic in the New Pic Upload dialog.
+   * Displays the given pic in the New Media Upload dialog.
    */
   displayPicture(url) {
     this.newPictureContainer.attr('src', url);
     page('/add');
-    this.imageCaptionInput.focus();
+    this.mediaCaptionInput.focus();
+    this.uploadButton.prop('disabled', true);
+  }
+
+  /**
+   * Displays the given video in the New Media Upload dialog.
+   */
+  displayVideo(url) {
+    this.newVideoPlayer.src({src: url, type: 'video/mp4'});
+    page('/add');
+    this.mediaCaptionInput.focus();
     this.uploadButton.prop('disabled', true);
   }
 
@@ -120,27 +166,36 @@ export default class Uploader {
     this.uploadButton.prop('disabled', disabled);
     this.addButton.prop('disabled', disabled);
     this.addButtonFloating.prop('disabled', disabled);
-    this.imageCaptionInput.prop('disabled', disabled);
+    this.mediaCaptionInput.prop('disabled', disabled);
     this.overlay.toggle(disabled);
   }
 
   /**
-   * Reads the picture the has been selected by the file picker.
+   * Reads the media the has been selected by the file picker.
    */
-  readPicture(event) {
+  readMedia(event) {
     this.clear();
 
     const file = event.target.files[0]; // FileList object
     this.currentFile = file;
 
     // Clear the selection in the file picker input.
-    this.imageInput.wrap('<form>').closest('form').get(0).reset();
-    this.imageInput.unwrap();
+    this.mediaInput.wrap('<form>').closest('form').get(0).reset();
+    this.mediaInput.unwrap();
 
     // Only process image files.
-    if (file.type.match('image.*')) {
+    if (this.isImage() || this.isVideo()) {
       const reader = new FileReader();
-      reader.onload = (e) => this.displayPicture(e.target.result);
+      if (this.isImage()) {
+        this.newVideoContainer.hide();
+        this.newPictureContainer.show();
+        reader.onload = (e) => this.displayPicture(e.target.result);
+      }
+      if (this.isVideo()) {
+        this.newVideoContainer.show();
+        this.newPictureContainer.hide();
+        reader.onload = (e) => this.displayVideo(e.target.result);
+      }
       // Read in the image file as a data URL.
       reader.readAsDataURL(file);
       this.disableUploadUi(false);
@@ -154,20 +209,22 @@ export default class Uploader {
    */
   static _getScaledCanvas(image, maxDimension) {
     const thumbCanvas = document.createElement('canvas');
-    if (image.width > maxDimension ||
-      image.height > maxDimension) {
+    const imageWidth = image.width || image.videoWidth;
+    const imageHeight = image.height || image.videoHeight;
+    if (imageWidth > maxDimension ||
+      imageHeight > maxDimension) {
       if (image.width > image.height) {
         thumbCanvas.width = maxDimension;
-        thumbCanvas.height = maxDimension * image.height / image.width;
+        thumbCanvas.height = maxDimension * imageHeight / imageWidth;
       } else {
-        thumbCanvas.width = maxDimension * image.width / image.height;
+        thumbCanvas.width = maxDimension * imageWidth / imageHeight;
         thumbCanvas.height = maxDimension;
       }
     } else {
-      thumbCanvas.width = image.width;
-      thumbCanvas.height = image.height;
+      thumbCanvas.width = imageWidth;
+      thumbCanvas.height = imageHeight;
     }
-    thumbCanvas.getContext('2d').drawImage(image, 0, 0, image.width, image.height,
+    thumbCanvas.getContext('2d').drawImage(image, 0, 0, imageWidth, imageHeight,
         0, 0, thumbCanvas.width, thumbCanvas.height);
     return thumbCanvas;
   }
@@ -175,7 +232,7 @@ export default class Uploader {
   /**
    * Generates the full size image and image thumb using canvas and returns them in a promise.
    */
-  async generateImages() {
+  async processImage() {
     const fullDeferred = new $.Deferred();
     const thumbDeferred = new $.Deferred();
 
@@ -209,20 +266,77 @@ export default class Uploader {
   }
 
   /**
+   * Generates the full size image and image thumb using canvas and returns them in a promise.
+   */
+  async processVideo() {
+    const fullDeferred = new $.Deferred();
+    const thumbDeferred = new $.Deferred();
+
+    const resolveFullBlob = (blob) => fullDeferred.resolve(blob);
+    const resolveThumbBlob = (blob) => thumbDeferred.resolve(blob);
+
+    const displayVideo = async (url) => {
+      const video = await Uploader.createVideo(url, {initialTime: 0.75});
+
+      // Generate thumb.
+      const maxThumbDimension = Uploader.THUMB_IMAGE_SPECS.maxDimension;
+      const thumbCanvas = Uploader._getScaledCanvas(video, maxThumbDimension);
+      thumbCanvas.toBlob(resolveThumbBlob, 'image/jpeg', Uploader.THUMB_IMAGE_SPECS.quality);
+
+      fetch(url).then((res) => res.blob()).then(resolveFullBlob);
+    };
+
+    const reader = new FileReader();
+    reader.onload = (e) => displayVideo(e.target.result);
+    reader.readAsDataURL(this.currentFile);
+
+    const results = await Promise.all([fullDeferred.promise(), thumbDeferred.promise()]);
+    return {
+      full: results[0],
+      thumb: results[1],
+    };
+  }
+
+  isImage() {
+    return this.currentFile && this.currentFile.type.match('image.*');
+  }
+
+  isVideo() {
+    return this.currentFile && this.currentFile.type.match('video.*');
+  }
+
+  async processMedia() {
+    let media = null;
+
+    if (this.isImage()) {
+      media = await this.processImage();
+    }
+    if (this.isVideo()) {
+      media = await this.processVideo();
+    }
+
+    return media;
+  }
+
+  /**
    * Uploads the pic to Cloud Storage and add a new post into the Firebase Database.
    */
-  async uploadPic(e) {
+  async uploadMedia(e) {
     e.preventDefault();
     this.disableUploadUi(true);
-    const imageCaption = this.imageCaptionInput.val();
+    const mediaCaption = this.mediaCaptionInput.val();
 
-    const pics = await this.generateImages();
+    const media = await this.processMedia();
+
+    if (!media) {
+      return;
+    }
     // Upload the File upload to Cloud Storage and create new post.
     try {
-      const postId = await this.firebaseHelper.uploadNewPic(pics.full, pics.thumb, this.currentFile.name, imageCaption);
+      const postId = await this.firebaseHelper.createPost(media.full, media.thumb, this.currentFile.name, mediaCaption);
       page(`/user/${this.auth.currentUser.uid}`);
       const data = {
-        message: 'New pic has been posted!',
+        message: 'New media has been posted!',
         actionHandler: () => page(`/post/${postId}`),
         actionText: 'View',
         timeout: 10000,
@@ -232,7 +346,7 @@ export default class Uploader {
     } catch (error) {
       console.error(error);
       const data = {
-        message: `There was an error while posting your pic. Sorry!`,
+        message: `There was an error while posting your media. Sorry!`,
         timeout: 5000,
       };
       MaterialUtils.showSnackbar(this.toast, data);
@@ -253,7 +367,7 @@ export default class Uploader {
     this.newPictureContainer.attr('src', '');
 
     // Clear the text field.
-    MaterialUtils.clearTextField(this.imageCaptionInput[0]);
+    MaterialUtils.clearTextField(this.mediaCaptionInput[0]);
 
     // Make sure UI is not disabled.
     this.disableUploadUi(false);
