@@ -60,7 +60,10 @@
 <body class="fp-auth-state-unknown">
 
 <!-- Theatre mode viewer -->
-<div class="fp-theatre"><img class="fp-fullpic" alt="Full sized image"></div>
+<div class="fp-theatre">
+  <video class="fp-fullvideo video-js vjs-big-play-centered"></video>
+  <img class="fp-fullpic" alt="Full sized image">
+</div>
 
 <!-- Splash screen -->
 <section id="page-splash">
@@ -144,7 +147,7 @@
       <div class="mdl-tab">
         <a href="/home" id="fp-menu-home" class="mdl-layout__tab fp-signed-in-only is-active mdl-button mdl-js-button"><i class="material-icons">home</i> Home</a>
         <a href="/recent" id="fp-menu-feed" class="mdl-layout__tab mdl-button mdl-js-button"><i class="material-icons">trending_up</i> Recent</a>
-        <input id="fp-mediacapture" type="file" accept="image/*" capture="camera">
+        <input id="fp-mediacapture" type="file" accept="image/*,video/*" capture="camera">
         <label id="fp-mediacapture-label" for="fp-mediacapture">Upload an image</label>
         <button class="fp-disabled-when-offline fp-signed-in-only mdl-button mdl-js-button mdl-button--fab mdl-cell--hide-tablet mdl-color--amber-400 mdl-shadow--4dp" id="add" disabled>
           <i class="material-icons">file_upload</i>
@@ -490,19 +493,20 @@
             <i class="material-icons">hourglass_full</i>
           </div>
           <img id="newPictureContainer" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==" alt="New Picture to Upload">
+          <video id="newVideoContainer" class="video-js vjs-big-play-centered"></video>
           <div class="mdl-card__supporting-text mdl-color-text--grey-600">
-            <form id="uploadPicForm" action="#">
+            <form id="uploadMediaForm" action="#">
               <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-                <input class="mdl-textfield__input" type="text" id="imageCaptionInput">
-                <label class="mdl-textfield__label" for="imageCaptionInput">Image caption...</label>
+                <input class="mdl-textfield__input" type="text" id="mediaCaptionInput">
+                <label class="mdl-textfield__label" for="mediaCaptionInput">Media caption...</label>
               </div>
               <br />
               <button type="submit" class="fp-upload mdl-button mdl-js-button mdl-button--raised mdl-color--amber-400">
-                Upload this pic!
+                Upload this file!
               </button>
             </form>
             <div class="fp-legalese-add">
-              All uploaded pictures will be publicly viewable, and must adhere to the <a href="/terms">Terms of Service</a>.
+              All uploaded media will be publicly viewable, and must adhere to the <a href="/terms">Terms of Service</a>.
             </div>
           </div>
         </div>

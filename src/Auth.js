@@ -18,7 +18,7 @@
 import $ from 'jquery';
 import firebase from 'firebase/app';
 import 'firebase/auth';
-import firebaseui from 'firebaseui';
+import * as firebaseui from 'firebaseui';
 import Router from './Router';
 import page from 'page';
 import {Utils} from './Utils';
@@ -143,7 +143,7 @@ export default class Auth {
   }
 
   /**
-   * Displays the Admin features if the user has the "admin=true" custom claim in its ID token. 
+   * Displays the Admin features if the user has the "admin=true" custom claim in its ID token.
    */
   async toggleAdminMode() {
     try {

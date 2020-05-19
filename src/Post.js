@@ -21,6 +21,7 @@ import 'firebase/auth';
 import {MaterialUtils, Utils} from './Utils';
 import swal from 'sweetalert';
 import page from 'page';
+import videojs from 'video.js';
 
 /**
  * Handles the single post UI.
@@ -48,6 +49,12 @@ export default class Post {
     if ($('.fp-image-container', '#page-post').children().length === 0) {
       $('.fp-image-container', '#page-post').append(this.postElement);
     }
+
+    this.videoPlayer = videojs(this.theatre.find('.fp-fullvideo').get(0), {
+      width: '800px',
+      height: 'auto',
+      controls: true,
+    });
   }
 
   /**
@@ -72,7 +79,7 @@ export default class Post {
       }
     } else {
       this.fillPostData(snapshot.key, post.thumb_url || post.url, post.text, post.author,
-          post.timestamp, post.thumb_storage_uri, post.full_storage_uri, post.full_url);
+          post.timestamp, post.thumb_storage_uri, post.full_storage_uri, post.full_url, post.mediaType);
     }
   }
 
@@ -155,8 +162,9 @@ export default class Post {
    * Fills the post's Card with the given details.
    * Also sets all auto updates and listeners on the UI elements of the post.
    */
-  async fillPostData(postId, thumbUrl, imageText, author = {}, timestamp, thumbStorageUri, picStorageUri, picUrl) {
+  async fillPostData(postId, thumbUrl, imageText, author = {}, timestamp, thumbStorageUri, picStorageUri, picUrl, mediaType) {
     const post = this.postElement;
+    const isVideo = /video\/.*/.test(mediaType);
 
     MaterialUtils.upgradeDropdowns(this.postElement);
 
@@ -165,13 +173,16 @@ export default class Post {
     $('.fp-avatar', post).css('background-image',
         `url(${Utils.addSizeToGoogleProfilePic(author.profile_picture) || '/images/silhouette.jpg'})`);
     $('.fp-username', post).text(author.full_name || 'Anonymous');
+    if (isVideo) {
+      $('.fp-play-video', post).show();
+    }
 
     // Shows the pic's thumbnail.
-    this._setupThumb(thumbUrl, picUrl);
+    this._setupThumb(thumbUrl, picUrl, mediaType);
 
     // Make sure we update if the thumb or pic URL changes.
     this.firebaseHelper.registerForThumbChanges(postId, (thumbUrl) => {
-      this._setupThumb(thumbUrl, picUrl);
+      this._setupThumb(thumbUrl, picUrl, mediaType);
     });
 
     if (this.auth.currentUser) {
@@ -201,6 +212,7 @@ export default class Post {
    * Leaves the theatre mode.
    */
   leaveTheatreMode() {
+    this.videoPlayer.reset();
     this.theatre.hide();
     this.theatre.off('click');
     $(document).off('keydown');
@@ -209,12 +221,25 @@ export default class Post {
   /**
    * Leaves the theatre mode.
    */
-  enterTheatreMode(picUrl) {
-    $('.fp-fullpic', this.theatre).prop('src', picUrl);
-    this.theatre.css('display', 'flex');
-    // Leave theatre mode if click or ESC key down.
+  enterTheatreMode(picUrl, mediaType) {
     this.theatre.off('click');
+    this.theatre.css('display', 'flex');
+    const isImage = /image\/.*/.test(mediaType);
+    const isVideo = /video\/.*/.test(mediaType);
+    const video = $('.fp-fullvideo', this.theatre);
+    const image = $('.fp-fullpic', this.theatre);
+    if (isImage) {
+      video.hide();
+      image.show().prop('src', picUrl);
+    }
+    if (isVideo) {
+      image.hide();
+      video.off('click').show().click((event) => event.stopPropagation());
+      this.videoPlayer.src(picUrl);
+      this.videoPlayer.play();
+    }
     this.theatre.click(() => this.leaveTheatreMode());
+    // Leave theatre mode if click or ESC key down.
     $(document).off('keydown');
     $(document).keydown((e) => {
       if (e.which === 27) {
@@ -227,12 +252,12 @@ export default class Post {
    * Shows the thumbnail and sets up the click to see the full size image.
    * @private
    */
-  _setupThumb(thumbUrl, picUrl) {
+  _setupThumb(thumbUrl, picUrl, mediaType) {
     const post = this.postElement;
 
     $('.fp-image', post).css('background-image', `url("${thumbUrl ? thumbUrl.replace(/"/g, '\\"') : ''}")`);
     $('.fp-image', post).unbind('click');
-    $('.fp-image', post).click(() => this.enterTheatreMode(picUrl || thumbUrl));
+    $('.fp-image', post).click(() => this.enterTheatreMode(picUrl || thumbUrl, mediaType));
   }
 
   /**
@@ -477,7 +502,9 @@ export default class Post {
                 <li class="mdl-menu__item fp-delete-post"><i class="material-icons">delete</i> Delete post</li>
               </ul>
             </div>
-            <div class="fp-image"></div>
+            <div class="fp-image">
+              <i class="fp-play-video material-icons" style="display: none">play_circle_outline</i>
+            </div>
             <div class="fp-likes">0 likes</div>
             <div class="fp-first-comment"></div>
             <div class="fp-morecomments">View more comments...</div>

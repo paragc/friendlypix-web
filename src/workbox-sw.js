@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 'use strict';
-
+/*
 // Load generated static asset caching.
 self.__precacheManifest = [].concat(self.__precacheManifest || []);
 workbox.precaching.suppressWarnings();
@@ -37,13 +37,14 @@ workbox.routing.registerRoute(
 // Routes for all dynamic HTML pages.
 workbox.routing.registerRoute(
   // Cache HTML files
-  /[^\.]*/,
+  /[^\.]* /,
   // Use cache but update in the background ASAP
   workbox.strategies.staleWhileRevalidate({
     // Use a custom cache name
     cacheName: 'html-cache',
   })
 );
+*/
 
 // Special routes to enable offline for Google Analytics.
 workbox.googleAnalytics.initialize();
